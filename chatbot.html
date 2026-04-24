@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600&family=Exo+2:wght@700;900&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07070f;--surface:#0f0f1c;--card:#131325;
+  --border:rgba(66,133,244,0.2);--accent:#4285f4;--accent2:#34a853;
+  --green:#10b981;--red:#ea4335;--yellow:#fbbc04;
+  --text:#e2e8f0;--muted:#64748b;
+  --ubub:linear-gradient(135deg,#4285f4,#1a73e8);
+  --bbub:#13132a;--glow:rgba(66,133,244,0.3);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);font-family:'Hind Siliguri',sans-serif;color:var(--text);height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 15% 10%,rgba(66,133,244,0.08) 0%,transparent 60%),radial-gradient(ellipse 50% 40% at 85% 85%,rgba(52,168,83,0.06) 0%,transparent 60%);pointer-events:none;z-index:0;}
+.grid{position:fixed;inset:0;background-image:linear-gradient(rgba(66,133,244,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(66,133,244,0.04) 1px,transparent 1px);background-size:36px 36px;z-index:0;mask-image:radial-gradient(ellipse at center,black 20%,transparent 75%);}
+
+/* OVERLAYS */
+.overlay{position:fixed;inset:0;background:rgba(7,7,15,.97);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
+.overlay.hidden{display:none;}
+.box{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:28px 24px;width:min(90vw,390px);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px var(--glow);animation:popIn .45s cubic-bezier(.16,1,.3,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(18px)}to{opacity:1;transform:none}}
+.box-icon{font-size:42px;text-align:center;margin-bottom:12px;}
+.box h2{font-family:'Exo 2',sans-serif;font-size:20px;text-align:center;background:linear-gradient(90deg,#4285f4,#34a853);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;}
+.box p{color:var(--muted);font-size:12px;text-align:center;margin-bottom:18px;line-height:1.55;}
+.sf{margin-bottom:12px;}
+.sf label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;}
+.sf input,.sf select,.sf textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Hind Siliguri',sans-serif;font-size:13.5px;outline:none;transition:border-color .2s;}
+.sf input:focus,.sf select:focus,.sf textarea:focus{border-color:rgba(66,133,244,.6);}
+.sf textarea{resize:none;height:60px;}
+.sf select option{background:var(--card);}
+.pw-wrap{position:relative;}
+.pw-wrap input{padding-right:38px;font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.5px;}
+.pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;}
+.note{background:rgba(66,133,244,.07);border:1px solid rgba(66,133,244,.2);border-radius:10px;padding:10px 12px;font-size:11.5px;color:#93bbff;margin-bottom:14px;line-height:1.55;}
+.note a{color:#34a853;}
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
+.btn{width:100%;padding:12px;background:linear-gradient(135deg,#4285f4,#1a73e8);border:none;border-radius:12px;color:#fff;font-family:'Hind Siliguri',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:2px;}
+.btn:hover{opacity:.9;transform:translateY(-1px);}
+.btn-sec{background:rgba(66,133,244,.1);border:1px solid rgba(66,133,244,.25);color:#93bbff;margin-top:8px;}
+.btn-sec:hover{background:rgba(66,133,244,.2);}
+.model-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.mc{padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;transition:all .2s;font-family:'Hind Siliguri',sans-serif;}
+.mc.active{background:rgba(66,133,244,.15);border-color:rgba(66,133,244,.5);color:#93bbff;}
+
+/* MAIN */
+.wrap{position:relative;z-index:1;width:min(96vw,500px);height:min(94vh,760px);display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:26px;overflow:hidden;box-shadow:0 0 0 1px rgba(66,133,244,.06),0 30px 60px rgba(0,0,0,.5),0 0 80px rgba(66,133,244,.05);}
+
+/* HEADER */
+.hdr{padding:13px 15px;background:linear-gradient(135deg,#0a0a22,#141428);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;position:relative;flex-shrink:0;}
+.hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#4285f4,#34a853,#fbbc04,#ea4335,transparent);opacity:.5;}
+.hav{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#4285f4,#34a853);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 0 14px var(--glow);position:relative;}
+.hav::after{content:'';position:absolute;bottom:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--green);border:2px solid var(--card);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4)}50%{box-shadow:0 0 0 5px rgba(16,185,129,0)}}
+.hi{flex:1;min-width:0;}
+.hname{font-family:'Exo 2',sans-serif;font-size:14.5px;font-weight:700;background:linear-gradient(90deg,#93bbff,#86efac);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hsub{font-size:10px;color:var(--muted);margin-top:1px;}
+.hbtns{display:flex;gap:4px;flex-shrink:0;}
+.hb{width:29px;height:29px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s;}
+.hb:hover{background:rgba(66,133,244,.15);color:#93bbff;border-color:rgba(66,133,244,.4);}
+
+/* MEMORY BAR */
+.mbar{padding:6px 13px;background:rgba(66,133,244,.05);border-bottom:1px solid var(--border);display:none;align-items:center;gap:6px;font-size:11px;color:#93bbff;flex-shrink:0;}
+.mdot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;flex-shrink:0;}
+.mchips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;flex:1;}
+.mchips::-webkit-scrollbar{display:none;}
+.mchip{background:rgba(66,133,244,.1);border:1px solid rgba(66,133,244,.2);border-radius:20px;padding:2px 8px;white-space:nowrap;font-size:10.5px;color:#93bbff;}
+
+/* MESSAGES */
+.msgs{flex:1;overflow-y:auto;padding:13px 12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;}
+.msgs::-webkit-scrollbar{width:3px;}
+.msgs::-webkit-scrollbar-thumb{background:rgba(66,133,244,.2);border-radius:2px;}
+.msg{display:flex;gap:7px;animation:fin .3s cubic-bezier(.16,1,.3,1);max-width:90%;}
+@keyframes fin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.msg.u{flex-direction:row-reverse;align-self:flex-end;}
+.msg.b{align-self:flex-start;}
+.mav{width:27px;height:27px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:2px;}
+.msg.b .mav{background:linear-gradient(135deg,#1a3a6b,#1a5a2a);border:1px solid rgba(66,133,244,.3);}
+.msg.u .mav{background:linear-gradient(135deg,#1a3a6b,#4285f4);border:1px solid rgba(66,133,244,.3);}
+.bbl{padding:9px 12px;border-radius:14px;font-size:13.5px;line-height:1.65;word-wrap:break-word;max-width:100%;}
+.msg.u .bbl{background:var(--ubub);border-radius:14px 4px 14px 14px;color:#fff;}
+.msg.b .bbl{background:var(--bbub);border:1px solid var(--border);border-radius:4px 14px 14px 14px;color:var(--text);}
+.meta{font-size:10px;color:var(--muted);margin-top:3px;padding:0 2px;}
+.msg.u .meta{text-align:right;}
+
+/* MARKDOWN */
+.bbl h1,.bbl h2,.bbl h3{font-family:'Exo 2',sans-serif;margin:8px 0 4px;color:#93bbff;}
+.bbl h1{font-size:16px;}.bbl h2{font-size:14.5px;}.bbl h3{font-size:13.5px;}
+.bbl p{margin:3px 0;}
+.bbl ul,.bbl ol{padding-left:16px;margin:3px 0;}
+.bbl li{margin:2px 0;}
+.bbl code{font-family:'JetBrains Mono',monospace;background:rgba(66,133,244,.15);border:1px solid rgba(66,133,244,.2);border-radius:4px;padding:1px 5px;font-size:11.5px;color:#93bbff;}
+.bbl pre{background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:9px;padding:10px;margin:7px 0;overflow-x:auto;}
+.bbl pre code{background:none;border:none;padding:0;font-size:11px;color:#94a3b8;}
+.bbl strong{color:#e2e8f0;font-weight:600;}.bbl em{color:#93bbff;}
+.bbl a{color:#34a853;text-decoration:none;}.bbl a:hover{text-decoration:underline;}
+.bbl hr{border:none;border-top:1px solid var(--border);margin:6px 0;}
+.bbl blockquote{border-left:3px solid var(--accent);padding-left:8px;color:var(--muted);margin:5px 0;}
+.bbl table{width:100%;border-collapse:collapse;font-size:12px;margin:7px 0;}
+.bbl th{background:rgba(66,133,244,.15);padding:5px 8px;text-align:left;border:1px solid var(--border);}
+.bbl td{padding:5px 8px;border:1px solid var(--border);}
+
+/* TYPING */
+.typing{display:flex;align-items:flex-start;gap:7px;align-self:flex-start;animation:fin .3s ease;}
+.typing .mav{width:27px;height:27px;border-radius:8px;background:linear-gradient(135deg,#1a3a6b,#1a5a2a);border:1px solid rgba(66,133,244,.3);display:flex;align-items:center;justify-content:center;font-size:12px;}
+.tbody{background:var(--bbub);border:1px solid var(--border);border-radius:4px 14px 14px 14px;padding:10px 14px;}
+.dots{display:flex;gap:4px;align-items:center;}
+.dot{width:5px;height:5px;border-radius:50%;animation:bounce 1.2s infinite;opacity:.7;}
+.dot:nth-child(1){background:#4285f4;}
+.dot:nth-child(2){background:#34a853;animation-delay:.2s;}
+.dot:nth-child(3){background:#fbbc04;animation-delay:.4s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px);opacity:1}}
+.tlbl{font-size:10px;color:var(--green);margin-top:5px;}
+
+/* SUGGESTIONS */
+.sugs{padding:5px 12px 3px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.sugs::-webkit-scrollbar{display:none;}
+.chip{padding:5px 11px;border-radius:20px;border:1px solid rgba(66,133,244,.22);background:rgba(66,133,244,.06);color:#93bbff;font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s;font-family:'Hind Siliguri',sans-serif;}
+.chip:hover{background:rgba(66,133,244,.18);border-color:rgba(66,133,244,.45);transform:translateY(-1px);}
+
+/* INPUT */
+.inp-area{padding:8px 12px 12px;background:rgba(7,7,15,.5);border-top:1px solid var(--border);flex-shrink:0;}
+.irow{display:flex;gap:6px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:7px 8px 7px 12px;transition:all .2s;}
+.irow:focus-within{border-color:rgba(66,133,244,.45);box-shadow:0 0 0 3px rgba(66,133,244,.07);}
+#inp{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Hind Siliguri',sans-serif;font-size:13.5px;line-height:1.5;resize:none;max-height:110px;min-height:22px;}
+#inp::placeholder{color:var(--muted);}
+.iacts{display:flex;gap:5px;align-items:flex-end;}
+.ab{width:31px;height:31px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .2s;}
+.ab:hover{background:rgba(66,133,244,.12);color:#93bbff;}
+.ab.rec{background:rgba(234,67,53,.15);color:var(--red);border-color:rgba(234,67,53,.3);}
+.sb{width:31px;height:31px;border-radius:9px;border:none;background:linear-gradient(135deg,#4285f4,#1a73e8);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:all .2s;box-shadow:0 3px 10px rgba(66,133,244,.35);}
+.sb:hover{transform:scale(1.07);}.sb:active{transform:scale(.95);}
+.sb:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+.ihint{font-size:10px;color:var(--muted);margin-top:4px;text-align:center;}
+
+/* WELCOME */
+.welcome{text-align:center;padding:20px 14px;animation:fin .5s ease;}
+.wi{font-size:40px;display:block;margin-bottom:8px;}
+.welcome h3{font-family:'Exo 2',sans-serif;font-size:18px;font-weight:700;background:linear-gradient(90deg,#93bbff,#86efac);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:5px;}
+.welcome p{color:var(--muted);font-size:12px;line-height:1.6;}
+
+/* MEM MODAL */
+.modalbg{position:fixed;inset:0;background:rgba(7,7,15,.85);z-index:50;display:none;align-items:center;justify-content:center;}
+.modalbg.open{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;width:min(88vw,340px);max-height:70vh;overflow-y:auto;}
+.modal h3{font-family:'Exo 2',sans-serif;font-size:14px;margin-bottom:12px;color:#93bbff;display:flex;justify-content:space-between;align-items:center;}
+.mx{background:none;border:none;color:var(--muted);cursor:pointer;font-size:17px;}
+.mi{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+.md2{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;flex-shrink:0;}
+.md2:hover{color:var(--red);}
+.clrbtn{width:100%;padding:8px;background:rgba(234,67,53,.08);border:1px solid rgba(234,67,53,.2);border-radius:9px;color:var(--red);font-family:'Hind Siliguri',sans-serif;font-size:12.5px;cursor:pointer;margin-top:3px;transition:all .2s;}
+.clrbtn:hover{background:rgba(234,67,53,.18);}
+</style>
+</head>
+<body>
+<div class="grid"></div>
+
+<!-- API KEY SCREEN -->
+<div class="overlay" id="apiOverlay">
+  <div class="box">
+    <div class="box-icon">🔑</div>
+    <h2>Gemini API Key দিন</h2>
+    <p>Google Gemini API key দিয়ে শুরু করুন।<br>Key একবার দিলে সেভ হয়ে থাকবে।</p>
+    <div class="note">
+      API key পেতে: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> → Get API Key → Create<br>
+      <span style="color:var(--muted)">Key শুধু আপনার browser-এ সেভ হয়, কোথাও পাঠানো হয় না।</span>
+    </div>
+    <div class="sf">
+      <label>Google Gemini API Key</label>
+      <div class="pw-wrap">
+        <input type="password" id="apiKeyInput" placeholder="AIza..." />
+        <button class="pw-eye" onclick="toggleEye()">👁</button>
+      </div>
+    </div>
+    <div class="sf">
+      <label>Model বেছে নিন</label>
+      <div class="model-chips">
+        <button class="mc active" onclick="selModel(this,'gemini-2.0-flash')">⚡ Gemini 2.0 Flash</button>
+        <button class="mc" onclick="selModel(this,'gemini-2.0-flash-thinking-exp')">🧠 Flash Thinking</button>
+        <button class="mc" onclick="selModel(this,'gemini-1.5-pro')">🌟 Gemini 1.5 Pro</button>
+      </div>
+    </div>
+    <button class="btn" onclick="saveApiKey()">সেভ করুন ও শুরু করুন →</button>
+    <p id="apiErr" style="color:var(--red);font-size:12px;text-align:center;margin-top:10px;display:none;"></p>
+  </div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div class="overlay hidden" id="setupOverlay">
+  <div class="box" style="max-height:90vh;overflow-y:auto;">
+    <div class="box-icon">🤖</div>
+    <h2>আপনার AI এজেন্ট</h2>
+    <p>একবার সেটআপ করুন — সে আপনাকে সবসময় মনে রাখবে</p>
+    <div class="sf">
+      <label>আপনার নাম *</label>
+      <input id="sName" placeholder="যেমন: রাহিম, Rahul, John..." />
+    </div>
+    <div class="sf">
+      <label>নিজের সম্পর্কে বলুন (ঐচ্ছিক)</label>
+      <textarea id="sAbout" placeholder="পেশা, আগ্রহ, দেশ... যা চান লিখুন"></textarea>
+    </div>
+    <div class="sf">
+      <label>পছন্দের ভাষা</label>
+      <select id="sLang">
+        <option value="auto">Auto — প্রশ্নের ভাষায় উত্তর দেবে</option>
+        <option value="bn">সবসময় বাংলায়</option>
+        <option value="en">Always in English</option>
+      </select>
+    </div>
+    <div class="sf">
+      <label>AI-এর নাম দিন</label>
+      <input id="sAiName" value="Gemini" placeholder="যেমন: Gemini, Nova, সহকারী..." />
+    </div>
+    <button class="btn" onclick="saveSetup()">শুরু করুন →</button>
+    <div class="divider"></div>
+    <button class="btn btn-sec" onclick="changeApiKey()">🔑 API Key পরিবর্তন করুন</button>
+  </div>
+</div>
+
+<!-- MEMORY MODAL -->
+<div class="modalbg" id="memModal">
+  <div class="modal">
+    <h3>🧠 মেমোরি <button class="mx" onclick="closeModal()">×</button></h3>
+    <div id="memList"></div>
+    <button class="clrbtn" onclick="clearAllMem()">🗑 সব মেমোরি মুছুন</button>
+  </div>
+</div>
+
+<!-- MAIN CHAT -->
+<div class="wrap">
+  <div class="hdr">
+    <div class="hav">✨</div>
+    <div class="hi">
+      <div class="hname" id="hName">AI এজেন্ট</div>
+      <div class="hsub" id="hSub">🌐 ইন্টারনেট · 🧠 মেমোরি · 🎤 ভয়েস · Gemini</div>
+    </div>
+    <div class="hbtns">
+      <button class="hb" onclick="openModal()" title="মেমোরি">🧠</button>
+      <button class="hb" onclick="newChat()" title="নতুন চ্যাট">✏️</button>
+      <button class="hb" onclick="openSetup()" title="সেটিংস">⚙️</button>
+    </div>
+  </div>
+
+  <div class="mbar" id="mbar">
+    <div class="mdot"></div>
+    <span style="flex-shrink:0;font-size:10.5px">মনে আছে:</span>
+    <div class="mchips" id="mchips"></div>
+  </div>
+
+  <div class="msgs" id="msgs">
+    <div class="welcome" id="wdiv">
+      <span class="wi">✨</span>
+      <h3>স্বাগতম!</h3>
+      <p>আমি আপনার ব্যক্তিগত AI এজেন্ট।<br>যেকোনো ভাষায় যা খুশি জিজ্ঞেস করুন।</p>
+    </div>
+  </div>
+
+  <div class="sugs">
+    <button class="chip" onclick="useChip(this)">আজকের খবর</button>
+    <button class="chip" onclick="useChip(this)">কোড লিখুন</button>
+    <button class="chip" onclick="useChip(this)">কবিতা লিখুন</button>
+    <button class="chip" onclick="useChip(this)">রেসিপি দিন</button>
+    <button class="chip" onclick="useChip(this)">অনুবাদ করুন</button>
+    <button class="chip" onclick="useChip(this)">ঢাকার আবহাওয়া</button>
+    <button class="chip" onclick="useChip(this)">Explain AI to me</button>
+  </div>
+
+  <div class="inp-area">
+    <div class="irow">
+      <textarea id="inp" placeholder="যেকোনো প্রশ্ন করুন..." rows="1"
+        onkeydown="hKey(event)" oninput="aResize(this)"></textarea>
+      <div class="iacts">
+        <button class="ab" id="vBtn" onclick="toggleVoice()" title="ভয়েস">🎤</button>
+        <button class="sb" id="sBtn" onclick="send()">➤</button>
+      </div>
+    </div>
+    <div class="ihint">Enter = পাঠান &nbsp;·&nbsp; Shift+Enter = নতুন লাইন</div>
+  </div>
+</div>
+
+<script>
+let hist=[], profile={}, mem=[], apiKey='', selMdl='gemini-2.0-flash';
+let isRec=false, recog=null;
+
+const S={
+  get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}},
+  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+};
+
+// INIT
+function init(){
+  apiKey=S.get('gm_key','');
+  selMdl=S.get('gm_model','gemini-2.0-flash');
+  profile=S.get('gm_profile',null);
+  mem=S.get('gm_mem',[]);
+  hist=S.get('gm_hist',[]);
+  if(!apiKey){show('apiOverlay');return;}
+  if(!profile){show('setupOverlay');return;}
+  hideAll(); applyProfile(); renderHist(); updateMbar();
+}
+
+function show(id){
+  ['apiOverlay','setupOverlay'].forEach(x=>{
+    document.getElementById(x).classList.toggle('hidden',x!==id);
+  });
+}
+function hideAll(){
+  document.getElementById('apiOverlay').classList.add('hidden');
+  document.getElementById('setupOverlay').classList.add('hidden');
+}
+
+// MODEL SELECTION
+function selModel(btn, model){
+  document.querySelectorAll('.mc').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  selMdl=model;
+}
+
+// API KEY
+function toggleEye(){
+  const i=document.getElementById('apiKeyInput');
+  i.type=i.type==='password'?'text':'password';
+}
+function saveApiKey(){
+  const key=document.getElementById('apiKeyInput').value.trim();
+  const err=document.getElementById('apiErr');
+  if(!key||key.length<10){
+    err.textContent='সঠিক API key দিন।';
+    err.style.display='block'; return;
+  }
+  apiKey=key;
+  S.set('gm_key',key);
+  S.set('gm_model',selMdl);
+  err.style.display='none';
+  if(!profile){show('setupOverlay');}
+  else{hideAll();applyProfile();renderHist();updateMbar();}
+}
+function changeApiKey(){
+  document.getElementById('apiKeyInput').value=apiKey||'';
+  show('apiOverlay');
+}
+
+// SETUP
+function saveSetup(){
+  const name=document.getElementById('sName').value.trim()||'বন্ধু';
+  const about=document.getElementById('sAbout').value.trim();
+  const lang=document.getElementById('sLang').value;
+  const aiName=document.getElementById('sAiName').value.trim()||'Gemini';
+  profile={name,about,lang,aiName};
+  S.set('gm_profile',profile);
+  hist=[]; S.set('gm_hist',[]);
+  hideAll(); applyProfile(); showWelcome(); updateMbar();
+}
+function openSetup(){
+  if(profile){
+    document.getElementById('sName').value=profile.name||'';
+    document.getElementById('sAbout').value=profile.about||'';
+    document.getElementById('sLang').value=profile.lang||'auto';
+    document.getElementById('sAiName').value=profile.aiName||'Gemini';
+  }
+  show('setupOverlay');
+}
+function applyProfile(){
+  const n=profile?.aiName||'AI এজেন্ট';
+  document.getElementById('hName').textContent=n;
+  document.getElementById('hSub').textContent=`🌐 ইন্টারনেট · 🧠 মেমোরি · 🎤 ভয়েস · ${selMdl}`;
+  document.title=n;
+}
+
+// WELCOME
+function showWelcome(){
+  document.getElementById('msgs').innerHTML=`<div class="welcome"><span class="wi">✨</span>
+    <h3>${profile?.aiName||'Gemini'} এখানে!</h3>
+    <p>হ্যালো ${profile?.name||'বন্ধু'}! আমি আপনার AI এজেন্ট।<br>যেকোনো ভাষায় যা খুশি জিজ্ঞেস করুন!</p></div>`;
+}
+
+function renderHist(){
+  const c=document.getElementById('msgs');
+  if(!hist.length){showWelcome();return;}
+  c.innerHTML='';
+  hist.forEach(m=>appendMsg(m.content,m.role==='model'?'b':'u',m.time,m.searched));
+}
+
+// MEMORY BAR
+function updateMbar(){
+  const bar=document.getElementById('mbar');
+  const chips=document.getElementById('mchips');
+  if(!mem.length){bar.style.display='none';return;}
+  bar.style.display='flex';
+  chips.innerHTML=mem.slice(-5).map(m=>`<span class="mchip">${m.t}</span>`).join('');
+}
+function openModal(){
+  document.getElementById('memList').innerHTML=mem.length?mem.map((m,i)=>`
+    <div class="mi"><span>${m.t}</span><button class="md2" onclick="delMem(${i})">🗑</button></div>
+  `).join(''):'<p style="color:var(--muted);font-size:12px;text-align:center;padding:14px">কোনো মেমোরি নেই।</p>';
+  document.getElementById('memModal').classList.add('open');
+}
+function closeModal(){document.getElementById('memModal').classList.remove('open');}
+function delMem(i){mem.splice(i,1);S.set('gm_mem',mem);updateMbar();openModal();}
+function clearAllMem(){
+  if(!confirm('সব মেমোরি মুছবেন?'))return;
+  mem=[];S.set('gm_mem',[]);updateMbar();closeModal();
+}
+
+// MARKDOWN
+function md(text){
+  const e=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return text
+    .replace(/```(\w*)\n?([\s\S]*?)```/g,(_,l,c)=>`<pre><code>${e(c.trim())}</code></pre>`)
+    .replace(/`([^`\n]+)`/g,'<code>$1</code>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^---+$/gm,'<hr>')
+    .replace(/^[\*\-] (.+)$/gm,'<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>')
+    .replace(/\[(.+?)\]\((.+?)\)/g,'<a href="$2" target="_blank">$1</a>')
+    .replace(/\n\n+/g,'</p><p>')
+    .replace(/\n/g,'<br>');
+}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// APPEND MSG
+function appendMsg(text,role,time,searched){
+  const c=document.getElementById('msgs');
+  const w=c.querySelector('.welcome');if(w)w.remove();
+  const div=document.createElement('div');
+  div.className=`msg ${role}`;
+  const content=role==='b'?`<p>${md(text)}</p>`:esc(text).replace(/\n/g,'<br>');
+  const meta=role==='b'&&searched
+    ?`<div class="meta"><span style="color:var(--green)">🌐 ওয়েব</span> · ${time||''}</div>`
+    :`<div class="meta">${time||''}</div>`;
+  div.innerHTML=`<div class="mav">${role==='u'?'👤':'✨'}</div><div><div class="bbl">${content}</div>${meta}</div>`;
+  c.appendChild(div); c.scrollTop=c.scrollHeight;
+}
+
+// TYPING
+function showTyping(lbl){
+  rmTyping();
+  const c=document.getElementById('msgs');
+  const d=document.createElement('div');
+  d.id='typing';d.className='typing';
+  d.innerHTML=`<div class="mav">✨</div><div class="tbody"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>${lbl?`<div class="tlbl">${lbl}</div>`:''}</div>`;
+  c.appendChild(d);c.scrollTop=c.scrollHeight;
+}
+function rmTyping(){const t=document.getElementById('typing');if(t)t.remove();}
+function setTLbl(lbl){const t=document.querySelector('#typing .tlbl');if(t)t.textContent=lbl;}
+
+// HELPERS
+function gTime(){return new Date().toLocaleTimeString('bn-BD',{hour:'2-digit',minute:'2-digit'});}
+function aResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
+function hKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
+function useChip(btn){document.getElementById('inp').value=btn.textContent;send();}
+function newChat(){hist=[];S.set('gm_hist',[]);showWelcome();}
+
+// MEMORY EXTRACTION
+function extractMem(u,b){
+  const txt=u+' '+b;
+  const rules=[
+    [/আমার নাম\s+([^\s।,.!?]+)/i,m=>`নাম: ${m[1]}`],
+    [/আমি\s+([^\s।,.!?]+)\s+থেকে/i,m=>`শহর: ${m[1]}`],
+    [/আমার বয়স\s+(\d+)/i,m=>`বয়স: ${m[1]}`],
+    [/আমি\s+([^\s।,.!?]+)\s+পড়ি/i,m=>`পড়াশোনা: ${m[1]}`],
+    [/আমার পছন্দ\s+([^\s।,.!?]+)/i,m=>`পছন্দ: ${m[1]}`],
+    [/my name is\s+([a-zA-Z]+)/i,m=>`Name: ${m[1]}`],
+    [/i(?:'m| am) from\s+([a-zA-Z ]+)/i,m=>`From: ${m[1].trim()}`],
+    [/i(?:'m| am)\s+(\d+)\s+years/i,m=>`Age: ${m[1]}`],
+    [/i work (?:at|in|as)\s+([a-zA-Z ]+)/i,m=>`Work: ${m[1].trim()}`],
+    [/i(?:'m| am) a\s+([a-zA-Z ]+?)(?:\s|$)/i,m=>`Role: ${m[1].trim()}`],
+    [/i love\s+([a-zA-Z ]+?)(?:\.|,|$)/i,m=>`Loves: ${m[1].trim()}`],
+  ];
+  rules.forEach(([re,fmt])=>{
+    const m=txt.match(re);
+    if(m){
+      const label=fmt(m);
+      if(!mem.find(x=>x.t===label)){
+        mem.push({t:label,ts:Date.now()});
+        if(mem.length>30)mem.shift();
+        S.set('gm_mem',mem);
+        updateMbar();
+      }
+    }
+  });
+}
+
+// SYSTEM INSTRUCTION
+function buildSys(){
+  const lr=profile?.lang==='bn'?'Always respond in Bengali (বাংলা) only.'
+    :profile?.lang==='en'?'Always respond in English only.'
+    :'Respond in the SAME language the user writes in.';
+  const ms=mem.length?`\n\nMemory about user:\n${mem.map(m=>m.t).join('\n')}`:'';
+  const ab=profile?.about?`\nUser info: ${profile.about}`:'';
+  return `You are ${profile?.aiName||'Gemini'}, a highly capable personal AI agent for ${profile?.name||'the user'}.
+
+LANGUAGE: ${lr}
+
+You can do everything:
+- Answer any question (science, history, math, technology, culture)
+- Write and debug code in any programming language
+- Write stories, poems, essays, emails, scripts
+- Translate between any languages
+- Summarize and analyze text or documents
+- Explain complex topics simply
+- Do math, logic, reasoning problems
+- Help plan, brainstorm, make decisions
+- Search Google for current news, weather, prices, sports scores
+
+Use markdown formatting (bold, lists, code blocks, tables) when it helps. Be warm and personal.
+Today: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}${ab}${ms}`;
+}
+
+// BUILD GEMINI HISTORY
+function buildGeminiHist(){
+  // Gemini expects alternating user/model roles
+  const msgs=[];
+  hist.slice(-30).forEach(m=>{
+    msgs.push({
+      role: m.role==='model'?'model':'user',
+      parts:[{text:m.content}]
+    });
+  });
+  return msgs;
+}
+
+// SEND
+async function send(){
+  const input=document.getElementById('inp');
+  const text=input.value.trim();
+  if(!text||!apiKey)return;
+  input.value='';input.style.height='auto';
+  document.getElementById('sBtn').disabled=true;
+
+  const t=gTime();
+  appendMsg(text,'u',t,false);
+  hist.push({role:'user',content:text,time:t});
+
+  // Check if web search needed
+  const needsWeb=/আজ|এখন|বর্তমান|খবর|নিউজ|আবহাওয়া|দাম|স্কোর|ফলাফল|লাইভ|today|now|latest|news|weather|price|score|current|trending|stock|cricket|football|\b202[4-9]\b/i.test(text);
+  showTyping(needsWeb?'🌐 ইন্টারনেটে খুঁজছি...':'💭 ভাবছি...');
+
+  try{
+    const model=S.get('gm_model','gemini-2.0-flash');
+
+    // Build request body
+    const body={
+      system_instruction:{parts:[{text:buildSys()}]},
+      contents:buildGeminiHist(),
+      generationConfig:{
+        maxOutputTokens:1500,
+        temperature:0.7,
+      }
+    };
+
+    // Add Google Search tool if needed
+    if(needsWeb){
+      body.tools=[{google_search:{}}];
+    }
+
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const res=await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    const data=await res.json();
+
+    if(data.error){
+      rmTyping();
+      let msg='❌ Error: '+data.error.message;
+      if(data.error.code===400) msg='❌ API key ভুল বা model সাপোর্ট করে না।';
+      if(data.error.code===429) msg='❌ Rate limit হয়েছে। একটু পরে চেষ্টা করুন।';
+      appendMsg(msg,'b',gTime(),false);
+      document.getElementById('sBtn').disabled=false;
+      return;
+    }
+
+    // Extract reply
+    const candidate=data.candidates?.[0];
+    const usedWeb=candidate?.groundingMetadata?.searchEntryPoint!=null || 
+                  candidate?.groundingMetadata?.webSearchQueries?.length>0;
+    
+    if(usedWeb)setTLbl('✅ তথ্য পাওয়া গেছে...');
+
+    let reply='দুঃখিত, উত্তর পাওয়া যায়নি।';
+    if(candidate?.content?.parts){
+      reply=candidate.content.parts.map(p=>p.text||'').join('').trim();
+    }
+
+    rmTyping();
+    const rt=gTime();
+    appendMsg(reply,'b',rt,usedWeb);
+    hist.push({role:'model',content:reply,time:rt,searched:usedWeb});
+    if(hist.length>60)hist=hist.slice(-60);
+    S.set('gm_hist',hist);
+    extractMem(text,reply);
+
+  }catch(err){
+    rmTyping();
+    const em=err?.message||String(err);
+    let msg='⚠️ Error: '+em;
+    if(em.includes('fetch')||em.includes('Network')||em.includes('CORS')){
+      msg='❌ CORS/Network সমস্যা!\n\nChrome এ local file থেকে API block হচ্ছে।\n\n✅ সমাধান: File টা কোনো web server দিয়ে open করুন, অথবা নিচের ধাপ অনুসরণ করুন:\n1. Chrome বন্ধ করুন\n2. Chrome shortcut এ right click → Properties → Target এর শেষে যোগ করুন: --disable-web-security --user-data-dir=C:/tmp';
+    }
+    appendMsg(msg,'b',gTime(),false);
+  }
+  document.getElementById('sBtn').disabled=false;
+  input.focus();
+}
+
+// VOICE
+function toggleVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert('Chrome ব্রাউজারে ভয়েস কাজ করে।');return;}
+  const btn=document.getElementById('vBtn');
+  if(isRec){recog?.stop();return;}
+  recog=new SR();
+  recog.lang=profile?.lang==='en'?'en-US':'bn-BD';
+  recog.interimResults=false;
+  recog.onstart=()=>{isRec=true;btn.textContent='🔴';btn.classList.add('rec');};
+  recog.onresult=e=>{document.getElementById('inp').value=e.results[0][0].transcript;aResize(document.getElementById('inp'));};
+  recog.onerror=()=>{isRec=false;btn.textContent='🎤';btn.classList.remove('rec');};
+  recog.onend=()=>{isRec=false;btn.textContent='🎤';btn.classList.remove('rec');};
+  recog.start();
+}
+
+document.getElementById('memModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.getElementById('apiKeyInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveApiKey();});
+
+init();
+</script>
+</body>
+</html>
